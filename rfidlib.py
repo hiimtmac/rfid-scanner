@@ -72,29 +72,29 @@ class RFID(object):
         self.init()
 
     def init(self):
-        self.reset()
-        self.dev_write(0x2A, 0x8D)
-        self.dev_write(0x2B, 0x3E)
-        self.dev_write(0x2D, 30)
-        self.dev_write(0x2C, 0)
-        self.dev_write(0x15, 0x40)
-        self.dev_write(0x11, 0x3D)
-        self.dev_write(0x26, (self.antenna_gain<<4))
+        self.reset()                    # "soft reset" by writing 0x0F to CommandReg
+        self.dev_write(0x2A, 0x8D)      # TModeReg - timer settings
+        self.dev_write(0x2B, 0x3E)      # TPrescalerReg - set ftimer = 13.56MHz/(2*TPrescaler+2)
+        self.dev_write(0x2D, 30)        # TReloadReg - set timer reload value
+        self.dev_write(0x2C, 0)         #      "
+        self.dev_write(0x15, 0x40)      # TxASKReg - force 100% ASK modulation
+        self.dev_write(0x11, 0x3D)      # ModeReg - general settings for Tx and Rx
+        self.dev_write(0x26, (self.antenna_gain<<4))    # RFCfgReg - set Rx's voltage gain factor
         self.set_antenna(True)
 
     def spi_transfer(self, data):
         if self.pin_ce != 0:
-            GPIO.output(self.pin_ce, 0)
-        r = self.spi.xfer2(data)
-        if self.pin_ce != 0:
-            GPIO.output(self.pin_ce, 1)
+            GPIO.output(self.pin_ce, 0)     # set chip select for SPI
+        r = self.spi.xfer2(data)            # SPI transfer, chip select held active between blocks
+        if self.pin_ce != 0:                
+            GPIO.output(self.pin_ce, 1)     # release chip select
         return r
 
     def dev_write(self, address, value):
-        self.spi_transfer([(address << 1) & 0x7E, value])
+        self.spi_transfer([(address << 1) & 0x7E, value]) # append 0 to address (LSB) and set MSB = 0
 
     def dev_read(self, address):
-        return self.spi_transfer([((address << 1) & 0x7E) | 0x80, 0])[1]
+        return self.spi_transfer([((address << 1) & 0x7E) | 0x80, 0])[1] # append 0 to address (LSB) and set MSB = 1
 
     def set_bitmask(self, address, mask):
         current = self.dev_read(address)
@@ -132,22 +132,22 @@ class RFID(object):
             irq = 0x77
             irq_wait = 0x30
 
-        self.dev_write(0x02, irq | 0x80)
-        self.clear_bitmask(0x04, 0x80)
-        self.set_bitmask(0x0A, 0x80)
-        self.dev_write(0x01, self.mode_idle)
+        self.dev_write(0x02, irq | 0x80)    # enable IRQs: timer, error, low alert, idle, rx, tx
+        self.clear_bitmask(0x04, 0x80)      # clear interrupts
+        self.set_bitmask(0x0A, 0x80)        # clear FIFO
+        self.dev_write(0x01, self.mode_idle)    # put chip in idle mode
 
         for i in range(len(data)):
-            self.dev_write(0x09, data[i])
+            self.dev_write(0x09, data[i])   # write data to FIFO
 
-        self.dev_write(0x01, command)
+        self.dev_write(0x01, command)       # set desired mode of operation
 
         if command == self.mode_transrec:
-            self.set_bitmask(0x0D, 0x80)
+            self.set_bitmask(0x0D, 0x80)    # start transmission
 
         i = 2000
         while True:
-            n = self.dev_read(0x04)
+            n = self.dev_read(0x04) # poll IRQs
             i -= 1
             if ~((i != 0) and ~(n & 0x01) and ~(n & irq_wait)):
                 break
@@ -155,7 +155,7 @@ class RFID(object):
         self.clear_bitmask(0x0D, 0x80)
 
         if i != 0:
-            if (self.dev_read(0x06) & 0x1B) == 0x00:
+            if (self.dev_read(0x06) & 0x1B) == 0x00:    # check ErrorReg
                 error = False
 
                 if n & irq & 0x01:
@@ -163,8 +163,8 @@ class RFID(object):
                     error = True
 
                 if command == self.mode_transrec:
-                    n = self.dev_read(0x0A)
-                    last_bits = self.dev_read(0x0C) & 0x07
+                    n = self.dev_read(0x0A)     # number of bytes stored in the FIFO
+                    last_bits = self.dev_read(0x0C) & 0x07  # number of valid bits in last rx'ed byte (if 000b, whole byte is valid)
                     if last_bits != 0:
                         back_length = (n - 1) * 8 + last_bits
                     else:
@@ -173,11 +173,11 @@ class RFID(object):
                     if n == 0:
                         n = 1
 
-                    if n > self.length:
+                    if n > self.length:     # max = 16 bytes
                         n = self.length
 
                     for i in range(n):
-                        back_data.append(self.dev_read(0x09))
+                        back_data.append(self.dev_read(0x09))   # read from FIFO and store in back_data
             else:
                 print("E2")
                 error = True
@@ -192,7 +192,7 @@ class RFID(object):
         error = True
         back_bits = 0
 
-        self.dev_write(0x0D, 0x07)
+        self.dev_write(0x0D, 0x07)  # start transmision
         (error, back_data, back_bits) = self.card_write(self.mode_transrec, [req_mode, ])
 
         if error or (back_bits != 0x10):
@@ -282,9 +282,9 @@ class RFID(object):
     def wait_for_tag(self):
         # enable IRQ on detect
         self.init()
-        self.irq.clear()
-        self.dev_write(0x04, 0x00)
-        self.dev_write(0x02, 0xA0)
+        self.irq.clear() 
+        self.dev_write(0x04, 0x00)  # clear interrupts
+        self.dev_write(0x02, 0xA0)  # enable RxIRQ only
         # wait for it
         waiting = True
         while waiting:
@@ -293,9 +293,9 @@ class RFID(object):
             self.dev_write(0x04, 0x00)
             self.dev_write(0x02, 0xA0)
 
-            self.dev_write(0x09, 0x26)
-            self.dev_write(0x01, 0x0C)
-            self.dev_write(0x0D, 0x87)
+            self.dev_write(0x09, 0x26)  # write something to FIFO
+            self.dev_write(0x01, 0x0C)  # TRX Mode: tx data in FIFO to antenna, then activate Rx
+            self.dev_write(0x0D, 0x87)  # start transmission
             waiting = not self.irq.wait(0.1)
         self.irq.clear()
         self.init()
@@ -310,4 +310,4 @@ class RFID(object):
         """
         if self.authed:
             self.stop_crypto()
-        GPIO.cleanup()
+        GPIO.cleanup()  # resets any used GPIOs to input
