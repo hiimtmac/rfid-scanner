@@ -488,7 +488,7 @@ class RFID {
             devWrite(address: 0x01, value: 0x0C) // TRX Mode: tx data in FIFO to antenna, then activate Rx
             devWrite(address: 0x0D, value: 0x87) // start transmission
 
-            waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .timedOut
+            waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .success
         }
     }
     
