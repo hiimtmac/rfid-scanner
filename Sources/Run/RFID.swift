@@ -470,7 +470,7 @@ class RFID {
     ///     self.init()
     /// ```
     func waitForTag() {
-        let semaphore = DispatchSemaphore(value: 1)
+        let semaphore = DispatchSemaphore(value: 0)
         
         irq.onFalling { gpio in
             print("on falling")
