@@ -477,13 +477,13 @@ class RFID {
             semaphore.signal()
         }
         
-        configure()
+//        configure()
         devWrite(address: 0x04, value: 0x00) // clear interrupts
         devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
         
         var waiting = true
         while waiting {
-            configure()
+//            configure()
             devWrite(address: 0x04, value: 0x00) // clear interrupts
             devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
             
@@ -493,7 +493,7 @@ class RFID {
 
             waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .timedOut
         }
-        configure()
+//        configure()
     }
     
     /// ```
