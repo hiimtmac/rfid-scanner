@@ -24,7 +24,7 @@ while true {
 //        case .failure(let error): print(error.localizedDescription)
 //        }
 //
-    sleep(5)
+    sleep(2)
 //    } else {
 //        print("error in request")
 //    }

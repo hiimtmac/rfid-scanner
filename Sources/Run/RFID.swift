@@ -87,12 +87,8 @@ class RFID {
         let semaphore = DispatchSemaphore(value: 0)
         
         irq.onFalling { gpio in
-            print("on falling")
             semaphore.signal()
         }
-        
-//        devWrite(address: 0x04, value: 0x00) // clear interrupts
-//        devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
         
         var waiting = true
         while waiting {

@@ -9,10 +9,10 @@ while True:
 #  (error, tag_type) = rdr.request()
 #  if not error:
   print("Tag detected")
-#    (error, uid) = rdr.anticoll()
-#    if not error:
-#      print("UID: " + str(uid))
-  time.sleep(5)
+  (error, uid) = rdr.anticoll()
+  if not error:
+    print("UID: " + str(uid))
+    time.sleep(5)
 
 # Calls GPIO cleanup
 rdr.cleanup()
