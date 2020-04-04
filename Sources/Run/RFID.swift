@@ -62,6 +62,54 @@ class RFID {
     }
     
     /// ```
+    /// def wait_for_tag(self):
+    ///     # enable IRQ on detect
+    ///     self.init()
+    ///     self.irq.clear()
+    ///     self.dev_write(0x04, 0x00)  # clear interrupts
+    ///     self.dev_write(0x02, 0xA0)  # enable RxIRQ only
+    ///     # wait for it
+    ///     waiting = True
+    ///     while waiting:
+    ///         self.init()
+    ///         #self.irq.clear()
+    ///         self.dev_write(0x04, 0x00)
+    ///         self.dev_write(0x02, 0xA0)
+    ///
+    ///         self.dev_write(0x09, 0x26)  # write something to FIFO
+    ///         self.dev_write(0x01, 0x0C)  # TRX Mode: tx data in FIFO to antenna, then activate Rx
+    ///         self.dev_write(0x0D, 0x87)  # start transmission
+    ///         waiting = not self.irq.wait(0.1)
+    ///     self.irq.clear()
+    ///     self.init()
+    /// ```
+    func waitForTag() {
+        let semaphore = DispatchSemaphore(value: 0)
+        
+        irq.onFalling { gpio in
+            print("on falling")
+            semaphore.signal()
+        }
+        
+        devWrite(address: 0x04, value: 0x00) // clear interrupts
+        devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
+        
+        var waiting = true
+        while waiting {
+            devWrite(address: 0x04, value: 0x00) // clear interrupts
+            devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
+            
+            devWrite(address: 0x09, value: 0x26) // write something to FIFO
+            devWrite(address: 0x01, value: 0x0C) // TRX Mode: tx data in FIFO to antenna, then activate Rx
+            devWrite(address: 0x0D, value: 0x87) // start transmission
+
+            waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .timedOut
+        }
+        
+        irq.onFalling { _ in }
+    }
+    
+    /// ```
     /// def set_bitmask(self, address, mask):
     ///     current = self.dev_read(address)
     ///     self.dev_write(address, current | mask)
@@ -86,7 +134,7 @@ class RFID {
     func setAntenna(_ bool: Bool) {
         if bool {
             let current = devRead(address: reg_tx_control)
-            if (current & 0x03) == 1 {
+            if !((current & 0x03) == 1) {
                 setBitmask(address: reg_tx_control, mask: 0x03)
             }
         } else {
@@ -444,53 +492,6 @@ class RFID {
             return false
         } else {
             return true
-        }
-    }
-    
-    /// ```
-    /// def wait_for_tag(self):
-    ///     # enable IRQ on detect
-    ///     self.init()
-    ///     self.irq.clear()
-    ///     self.dev_write(0x04, 0x00)  # clear interrupts
-    ///     self.dev_write(0x02, 0xA0)  # enable RxIRQ only
-    ///     # wait for it
-    ///     waiting = True
-    ///     while waiting:
-    ///         self.init()
-    ///         #self.irq.clear()
-    ///         self.dev_write(0x04, 0x00)
-    ///         self.dev_write(0x02, 0xA0)
-    ///
-    ///         self.dev_write(0x09, 0x26)  # write something to FIFO
-    ///         self.dev_write(0x01, 0x0C)  # TRX Mode: tx data in FIFO to antenna, then activate Rx
-    ///         self.dev_write(0x0D, 0x87)  # start transmission
-    ///         waiting = not self.irq.wait(0.1)
-    ///     self.irq.clear()
-    ///     self.init()
-    /// ```
-    func waitForTag() {
-        let semaphore = DispatchSemaphore(value: 0)
-        
-        irq.onFalling { gpio in
-            print("on falling")
-            semaphore.signal()
-//            gpio.clearListeners()
-        }
-        
-        devWrite(address: 0x04, value: 0x00) // clear interrupts
-        devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
-        
-        var waiting = true
-        while waiting {
-            devWrite(address: 0x04, value: 0x00) // clear interrupts
-            devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
-            
-            devWrite(address: 0x09, value: 0x26) // write something to FIFO
-            devWrite(address: 0x01, value: 0x0C) // TRX Mode: tx data in FIFO to antenna, then activate Rx
-            devWrite(address: 0x0D, value: 0x87) // start transmission
-
-            waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .timedOut
         }
     }
     
