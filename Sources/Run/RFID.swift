@@ -28,8 +28,6 @@ class RFID {
     private var antenna_gain: Byte = 0x04
     /// authed = False
     private var authed = false
-    ///irq = threading.Event()
-    private let semaphore: DispatchSemaphore
     
     let spi: SPIInterface
     
@@ -37,15 +35,8 @@ class RFID {
         self.spi = spi
         self.pin_irq = gpio
         
-        let semaphore = DispatchSemaphore(value: 1)
-        self.semaphore = semaphore
-        
         gpio.direction = .IN
         gpio.pull = .up
-        gpio.onFalling { _ in
-            print("falling")
-            semaphore.signal()
-        }
         
         self.configure()
     }
@@ -457,7 +448,7 @@ class RFID {
     }
     
     /// ```
-    ///def wait_for_tag(self):
+    /// def wait_for_tag(self):
     ///     # enable IRQ on detect
     ///     self.init()
     ///     self.irq.clear()
@@ -479,17 +470,30 @@ class RFID {
     ///     self.init()
     /// ```
     func waitForTag() {
+        let semaphore = DispatchSemaphore(value: 1)
+        
+        irq.onFalling { gpio in
+            print("on falling")
+            semaphore.signal()
+        }
+        
+        configure()
         devWrite(address: 0x04, value: 0x00) // clear interrupts
         devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
         
         var waiting = true
         while waiting {
+            configure()
+            devWrite(address: 0x04, value: 0x00) // clear interrupts
+            devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
+            
             devWrite(address: 0x09, value: 0x26) // write something to FIFO
             devWrite(address: 0x01, value: 0x0C) // TRX Mode: tx data in FIFO to antenna, then activate Rx
             devWrite(address: 0x0D, value: 0x87) // start transmission
 
-            waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .success
+            waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .timedOut
         }
+        configure()
     }
     
     /// ```
