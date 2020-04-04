@@ -12,6 +12,7 @@ let rfid = RFID(spi: spi, gpio: irq)
 while true {
     print("wait for tag...")
     rfid.waitForTag()
+    print("break wait for tag...")
     
     let error = rfid.request()
     

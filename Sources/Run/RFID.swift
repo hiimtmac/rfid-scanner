@@ -290,7 +290,7 @@ class RFID {
     ///     return (False, back_bits)
     /// ```
     func request(mode: Byte = 0x26) -> Bool {
-        print("request: \(mode)")
+        print("request mode: \(mode)")
         
         devWrite(address: 0x0D, value: 0x07)
         let (_, backBits, error) = cardWrite(command: mode_transrec, data: [mode])
@@ -479,7 +479,6 @@ class RFID {
     ///     self.init()
     /// ```
     func waitForTag() {
-        print("wait for tag")
         devWrite(address: 0x04, value: 0x00) // clear interrupts
         devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
         
