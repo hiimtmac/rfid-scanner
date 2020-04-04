@@ -90,6 +90,7 @@ class RFID {
         gpio.direction = .IN
         gpio.pull = .up
         gpio.onFalling { _ in
+            print("falling")
             semaphore.signal()
         }
         
