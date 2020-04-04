@@ -4,7 +4,7 @@ import Foundation
 print("Get spi")
 let spi = SwiftyGPIO.hardwareSPIs(for: .RaspberryPi3)![0]
 print("get irq")
-let irq = SwiftyGPIO.GPIOs(for: .RaspberryPi3)[.P18]!
+let irq = SwiftyGPIO.GPIOs(for: .RaspberryPi3)[.P24]!
 
 print("make rfid")
 let rfid = RFID(spi: spi, gpio: irq)
