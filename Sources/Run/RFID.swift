@@ -106,7 +106,7 @@ class RFID {
             waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .timedOut
         }
         
-        irq.onFalling { _ in }
+        configure()
     }
     
     /// ```
