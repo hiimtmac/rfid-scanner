@@ -1,4 +1,5 @@
 import SwiftyGPIO
+import Foundation
 
 print("Get spi")
 let spi = SwiftyGPIO.hardwareSPIs(for: .RaspberryPi3)![0]
@@ -8,9 +9,22 @@ let irq = SwiftyGPIO.GPIOs(for: .RaspberryPi3)[.P18]!
 print("make rfid")
 let rfid = RFID(spi: spi, gpio: irq)
 
-print("write to rgister")
-rfid.devWrite(address: 0x09, value: 0x06)
-
-print("read from dev")
-let read = rfid.devRead(address: 0x09)
-print(read)
+while true {
+    print("wait for tag...")
+    rfid.waitForTag()
+    
+    let error = rfid.request()
+    
+    if !error {
+        print("tag detected")
+        let result = rfid.anticoll()
+        switch result {
+        case .success(let bytes): print("UID: \(bytes)")
+        case .failure(let error): print(error.localizedDescription)
+        }
+        
+        sleep(5)
+    } else {
+        print("error in request")
+    }
+}

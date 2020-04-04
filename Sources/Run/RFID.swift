@@ -6,49 +6,26 @@ typealias Bytes = [Byte]
 
 class RFID {
     
-    /// pin_rst = 22
-    /// pin_ce = 0
     /// pin_irq = 18
     private let pin_irq: GPIO
-
     /// mode_idle = 0x00
     private let mode_idle: Byte = 0x00
-    /// mode_auth = 0x0E
-    /// mode_receive = 0x08
-    /// mode_transmit = 0x04
     /// mode_transrec = 0x0C
     private let mode_transrec: Byte = 0x0C
     /// mode_reset = 0x0F
     private let mode_reset: Byte = 0x0F
     /// mode_crc = 0x03
     private let mode_crc: Byte = 0x03
-
-    /// auth_a = 0x60
-    /// auth_b = 0x61
-
-    /// act_read = 0x30
-    /// act_write = 0xA0
-    /// act_increment = 0xC1
-    /// act_decrement = 0xC0
-    /// act_restore = 0xC2
-    /// act_transfer = 0xB0
-
-    /// act_reqidl = 0x26
-    /// act_reqall = 0x52
     /// act_anticl = 0x93
     private let act_anticl: Byte = 0x93
     /// act_select = 0x93
     private let act_select: Byte = 0x93
-    /// act_end = 0x50
-
     /// reg_tx_control = 0x14
     private let reg_tx_control: Byte = 0x14
     /// length = 16
     private let length: Byte = 16
-
     /// antenna_gain = 0x04
     private var antenna_gain: Byte = 0x04
-
     /// authed = False
     private var authed = false
     ///irq = threading.Event()
@@ -56,30 +33,6 @@ class RFID {
     
     let spi: SPIInterface
     
-    /// ```
-    /// def __init__(self, bus=0, device=0, speed=1000000, pin_rst=def_pin_rst,
-    ///         pin_ce=0, pin_irq=def_pin_irq, pin_mode = def_pin_mode):
-    ///     self.pin_rst = pin_rst
-    ///     self.pin_ce = pin_ce
-    ///     self.pin_irq = pin_irq
-    ///
-    ///     self.spi = SPIClass()
-    ///     self.spi.open(bus, device)
-    ///     self.spi.max_speed_hz = speed
-    ///
-    ///     if pin_mode is not None:
-    ///         GPIO.setmode(pin_mode)
-    ///     if pin_rst != 0:
-    ///         GPIO.setup(pin_rst, GPIO.OUT)
-    ///         GPIO.output(pin_rst, 1)
-    ///     GPIO.setup(pin_irq, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    ///     GPIO.add_event_detect(pin_irq, GPIO.FALLING,
-    ///             callback=self.irq_callback)
-    ///     if pin_ce != 0:
-    ///         GPIO.setup(pin_ce, GPIO.OUT)
-    ///         GPIO.output(pin_ce, 1)
-    ///     self.init()
-    /// ```
     init(spi: SPIInterface, gpio: GPIO) {
         self.spi = spi
         self.pin_irq = gpio
@@ -97,18 +50,6 @@ class RFID {
         self.configure()
     }
     
-    /// ```
-    /// def init(self):
-    ///     self.reset()                    # "soft reset" by writing 0x0F to CommandReg
-    ///     self.dev_write(0x2A, 0x8D)      # TModeReg - timer settings
-    ///     self.dev_write(0x2B, 0x3E)      # TPrescalerReg - set ftimer = 13.56MHz/(2*TPrescaler+2)
-    ///     self.dev_write(0x2D, 30)        # TReloadReg - set timer reload value
-    ///     self.dev_write(0x2C, 0)         #      "
-    ///     self.dev_write(0x15, 0x40)      # TxASKReg - force 100% ASK modulation
-    ///     self.dev_write(0x11, 0x3D)      # ModeReg - general settings for Tx and Rx
-    ///     self.dev_write(0x26, (self.antenna_gain<<4))    # RFCfgReg - set Rx's voltage gain factor
-    ///     self.set_antenna(True)
-    /// ```
     private func configure() {
         self.reset()                                            // "soft reset" by writing 0x0F to CommandReg
         self.devWrite(address: 0x2A, value: 0x8D)               // TModeReg - timer settings
@@ -121,32 +62,11 @@ class RFID {
         self.setAntenna(true)
     }
     
-    /// ```
-    /// def spi_transfer(self, data):
-    ///     if self.pin_ce != 0:
-    ///         GPIO.output(self.pin_ce, 0)     # set chip select for SPI
-    ///     r = self.spi.xfer2(data)            # SPI transfer, chip select held active between blocks
-    ///     if self.pin_ce != 0:
-    ///         GPIO.output(self.pin_ce, 1)     # release chip select
-    ///     return r
-    /// ```
-    func spiTransfer(data: Bytes) {
-        preconditionFailure("This method is not needed as the SPI is injected into this class")
-    }
-    
-    /// ```
-    /// def dev_write(self, address, value):
-    ///     self.spi_transfer([(address << 1) & 0x7E, value]) # append 0 to address (LSB) and set MSB = 0
-    /// ```
     func devWrite(address: Byte, value: Byte) {
         print("writing: \(value) to \(address)...")
         spi.sendData([(address << 1) & 0x7E, value], frequencyHz: 1_000_000)
     }
     
-    /// ```
-    /// def dev_read(self, address):
-    ///     return self.spi_transfer([((address << 1) & 0x7E) | 0x80, 0])[1] # append 0 to address (LSB) and set MSB = 1
-    /// ```
     func devRead(address: Byte) -> Byte {
         print("reading: \(address)...")
         return spi.sendDataAndRead([((address << 1) & 0x7E) | 0x80, 0], frequencyHz: 1_000_000)[1]
@@ -158,6 +78,7 @@ class RFID {
     ///     self.dev_write(address, current | mask)
     /// ```
     func setBitmask(address: Byte, mask: Byte) {
+        print("set bitmask: \(mask) to \(address)")
         let current = devRead(address: address)
         devWrite(address: address, value: current | mask)
     }
@@ -168,19 +89,11 @@ class RFID {
     ///     self.dev_write(address, current & (~mask))
     /// ```
     func clearBitmask(address: Byte, mask: Byte) {
+        print("clear bitmask: \(mask) to \(address)")
         let current = devRead(address: address)
         devWrite(address: address, value: current & (~mask))
     }
     
-    /// ```
-    /// def set_antenna(self, state):
-    ///     if state == True:
-    ///         current = self.dev_read(self.reg_tx_control)
-    ///         if ~(current & 0x03):
-    ///             self.set_bitmask(self.reg_tx_control, 0x03)
-    ///     else:
-    ///         self.clear_bitmask(self.reg_tx_control, 0x03)
-    /// ```
     func setAntenna(_ bool: Bool) {
         if bool {
             let current = devRead(address: reg_tx_control)
@@ -201,6 +114,7 @@ class RFID {
     ///         self.antenna_gain = gain
     /// ```
     func setAntennaGain(gain: Byte) {
+        print("set antenna gain: \(gain)")
         if (0...7).contains(gain) {
             antenna_gain = gain
         }
@@ -273,6 +187,8 @@ class RFID {
     ///     return (error, back_data, back_length)
     /// ```
     func cardWrite(command: Byte, data: Bytes) -> (Bytes, Int, Bool) {
+        print("card write")
+        
         var backData = Bytes()
         var backLength = 0
         var error = false
@@ -376,6 +292,7 @@ class RFID {
     ///     return (False, back_bits)
     /// ```
     func request(mode: Byte = 0x26) -> Bool {
+        print("request: \(mode)")
         
         devWrite(address: 0x0D, value: 0x07)
         let (_, backBits, error) = cardWrite(command: mode_transrec, data: [mode])
@@ -416,6 +333,8 @@ class RFID {
     ///     return (error, back_data)
     /// ```
     func anticoll() -> Result<Bytes, Error> {
+        print("anticoll")
+        
         var serialNumber = Bytes()
         
         var serialNumberCheck: Byte = 0x00
@@ -463,6 +382,7 @@ class RFID {
     ///     return ret_data
     /// ```
     func calculateCrc(data: Bytes) -> Bytes {
+        print("caclulate crc: \(data)")
         clearBitmask(address: 0x05, mask: 0x04)
         setBitmask(address: 0x0A, mask: 0x80)
         
@@ -517,6 +437,7 @@ class RFID {
     ///         return True
     /// ```
     func selectTag(uid: Bytes) -> Bool {
+        print("select tag: \(uid)")
         var buffer = Bytes()
         buffer.append(act_select)
         buffer.append(0x70)
@@ -535,15 +456,6 @@ class RFID {
         } else {
             return true
         }
-    }
-    
-    /// ```
-    /// def irq_callback(self, pin):
-    ///     self.irq.set()
-    /// ```
-    var irqCallback: (GPIO) -> Void = { gpio in
-//        self?.semaphore.signal()
-        fatalError("not implemented")
     }
     
     /// ```
@@ -569,6 +481,7 @@ class RFID {
     ///     self.init()
     /// ```
     func waitForTag() {
+        print("wait for tag")
         devWrite(address: 0x04, value: 0x00) // clear interrupts
         devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
         
@@ -580,8 +493,6 @@ class RFID {
 
             waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .timedOut
         }
-        
-        
     }
     
     /// ```
@@ -590,6 +501,7 @@ class RFID {
     ///     self.dev_write(0x01, self.mode_reset)
     /// ```
     func reset() {
+        print("reset")
         authed = false
         devWrite(address: 0x01, value: mode_reset)
     }
@@ -604,7 +516,7 @@ class RFID {
     ///     GPIO.cleanup()  # resets any used GPIOs to input
     /// ```
     deinit {
-//        fatalError("not implemented")
+        irq.direction = .IN
     }
 }
 
