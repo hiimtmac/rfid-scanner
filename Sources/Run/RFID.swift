@@ -502,7 +502,6 @@ class RFID {
     ///     self.dev_write(0x01, self.mode_reset)
     /// ```
     func reset() {
-        print("reset")
         authed = false
         devWrite(address: 0x01, value: mode_reset)
     }
