@@ -475,7 +475,7 @@ class RFID {
         irq.onFalling { gpio in
             print("on falling")
             semaphore.signal()
-            gpio.clearListeners()
+//            gpio.clearListeners()
         }
         
         devWrite(address: 0x04, value: 0x00) // clear interrupts
