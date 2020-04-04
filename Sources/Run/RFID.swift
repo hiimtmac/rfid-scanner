@@ -63,12 +63,10 @@ class RFID {
     }
     
     func devWrite(address: Byte, value: Byte) {
-        print("writing: \(value) to \(address)...")
         spi.sendData([(address << 1) & 0x7E, value], frequencyHz: 1_000_000)
     }
     
     func devRead(address: Byte) -> Byte {
-        print("reading: \(address)...")
         return spi.sendDataAndRead([((address << 1) & 0x7E) | 0x80, 0], frequencyHz: 1_000_000)[1]
     }
     
