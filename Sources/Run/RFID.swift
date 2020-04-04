@@ -91,17 +91,19 @@ class RFID {
             semaphore.signal()
         }
         
+//        devWrite(address: 0x04, value: 0x00) // clear interrupts
+//        devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
+        
         devWrite(address: 0x04, value: 0x00) // clear interrupts
         devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
         
+        devWrite(address: 0x09, value: 0x26) // write something to FIFO
+        devWrite(address: 0x01, value: 0x0C) // TRX Mode: tx data in FIFO to antenna, then activate Rx
+        devWrite(address: 0x0D, value: 0x87) // start transmission
+        
         var waiting = true
         while waiting {
-            devWrite(address: 0x04, value: 0x00) // clear interrupts
-            devWrite(address: 0x02, value: 0xA0) // enable RxIRQ only
-            
-            devWrite(address: 0x09, value: 0x26) // write something to FIFO
-            devWrite(address: 0x01, value: 0x0C) // TRX Mode: tx data in FIFO to antenna, then activate Rx
-            devWrite(address: 0x0D, value: 0x87) // start transmission
+
 
             waiting = semaphore.wait(timeout: .init(uptimeNanoseconds: 100_000_000)) == .timedOut
         }
