@@ -149,7 +149,14 @@ class RFID(object):
         while True:
             n = self.dev_read(0x04) # poll IRQs
             i -= 1
-            if ~((i != 0) and ~(n & 0x01) and ~(n & irq_wait)):
+            
+            a = (i != 0)
+            b = ~(n & 0x01)
+            c = ~(n & irq_wait)
+            agg = ~(b and c)
+            
+            if agg:
+                print("n, i:", n, i)
                 break
 
         self.clear_bitmask(0x0D, 0x80)
@@ -157,18 +164,23 @@ class RFID(object):
         if i != 0:
             if (self.dev_read(0x06) & 0x1B) == 0x00:    # check ErrorReg
                 error = False
-
-                if n & irq & 0x01:
-                    print("E1")
+                
+                print("n & 0x77 & 0x01", n & 0x77 & 0x01)
+                if n & 0x77 & 0x01:
+                    print("E1: Request timed out")
                     error = True
 
                 if command == self.mode_transrec:
                     n = self.dev_read(0x0A)     # number of bytes stored in the FIFO
+                    print("n", n)
                     last_bits = self.dev_read(0x0C) & 0x07  # number of valid bits in last rx'ed byte (if 000b, whole byte is valid)
+                    print("last_bits", last_bits)
                     if last_bits != 0:
                         back_length = (n - 1) * 8 + last_bits
                     else:
                         back_length = n * 8
+                        
+                    print("back_length", back_length)
 
                     if n == 0:
                         n = 1
@@ -176,12 +188,14 @@ class RFID(object):
                     if n > self.length:     # max = 16 bytes
                         n = self.length
 
+                    print("range(n)", range(n))
                     for i in range(n):
                         back_data.append(self.dev_read(0x09))   # read from FIFO and store in back_data
             else:
                 print("E2")
                 error = True
 
+        print("return error, back_data, back_length", error, back_data, back_length)
         return (error, back_data, back_length)
 
     def request(self, req_mode=0x26):
@@ -193,7 +207,7 @@ class RFID(object):
         back_bits = 0
 
         self.dev_write(0x0D, 0x07)  # start transmision
-        (error, back_data, back_bits) = self.card_write(self.mode_transrec, [req_mode, ])
+        (error, back_data, back_bits) = self.card_write(self.mode_transrec, [req_mode])
 
         if error or (back_bits != 0x10):
             return (True, None)
