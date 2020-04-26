@@ -59,5 +59,6 @@ class FileIO {
         
         let destination = first.appendingPathComponent("rfid-scan-data")
         try fm.copyItem(at: fileURL, to: destination)
+        print(fileURL, destination)
     }
 }
