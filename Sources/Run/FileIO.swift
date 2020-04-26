@@ -29,11 +29,11 @@ class FileIO {
     
     func writeTagOccurrence(tag: String) throws {
         let time = DateFormatter()
-        time.timeZone = TimeZone(identifier: "UTC")
+        time.timeZone = TimeZone(abbreviation: "UTC")
         time.dateFormat = "hh:mm:ss"
         
         let date = DateFormatter()
-        date.timeZone = TimeZone(identifier: "UTC")
+        date.timeZone = TimeZone(abbreviation: "UTC")
         date.dateFormat = "yyyy-MM-dd"
         
         let now = Date()
