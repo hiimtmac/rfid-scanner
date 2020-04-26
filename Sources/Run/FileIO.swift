@@ -38,7 +38,7 @@ class FileIO {
     
     func exportFile() throws {
         // usually where usb on pi shows up
-        let mediaURL = URL(fileURLWithPath: "/var/media", isDirectory: true)
+        let mediaURL = URL(fileURLWithPath: "/media", isDirectory: true)
         // get url to any plugged in
         let urls = try fm.contentsOfDirectory(at: mediaURL, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
         // take one (assume only one to be plugged in)
