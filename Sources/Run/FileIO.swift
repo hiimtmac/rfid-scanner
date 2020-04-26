@@ -28,11 +28,22 @@ class FileIO {
     }
     
     func writeTagOccurrence(tag: String) throws {
-        let now = Date()
-        let date = DateFormatter.localizedString(from: now, dateStyle: .short, timeStyle: .none)
-        let time = DateFormatter.localizedString(from: now, dateStyle: .none, timeStyle: .short)
+        let time = DateFormatter()
+        time.timeZone = TimeZone(identifier: "UTC")
+        time.dateFormat = "hh:mm:ss"
         
-        let values = [date, time, tag]
+        let date = DateFormatter()
+        date.timeZone = TimeZone(identifier: "UTC")
+        date.dateFormat = "yyyy-MM-dd"
+        
+        let now = Date()
+        
+        let values = [
+            date.string(from: now),
+            time.string(from: now),
+            tag
+        ]
+        
         try writer.write(row: values)
     }
     
