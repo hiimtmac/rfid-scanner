@@ -15,8 +15,8 @@ class Button {
         
         gpio.direction = .IN
         gpio.value = 0
-//        gpio.bounceTime = 0.5
-        gpio.onRaising { [weak self] _ in
+        gpio.bounceTime = 0.5
+        gpio.onFalling { [weak self] _ in
             guard let self = self else { return }
             self.delegate?.buttonDidPush(self)
         }

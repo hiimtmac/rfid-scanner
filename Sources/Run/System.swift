@@ -24,8 +24,8 @@ class System {
     let successLight: Light
     
 //    // Export button
-//    let export: Button
-//
+    let exportButton: Button
+
     // data holder
     let file: FileIO
     
@@ -40,22 +40,21 @@ class System {
             throw SystemError.gpio(.P24)
         }
         
-        guard let power = gpios[.P6] else {
-            throw SystemError.gpio(.P6)
-        }
-        
-        guard let ready = gpios[.P13] else {
+        guard let power = gpios[.P13] else {
             throw SystemError.gpio(.P13)
         }
         
-        guard let success = gpios[.P19] else {
+        guard let ready = gpios[.P19] else {
             throw SystemError.gpio(.P19)
         }
+        
+        guard let success = gpios[.P26] else {
+            throw SystemError.gpio(.P26)
+        }
 
-//        // TODO: select
-//        guard let export = gpios[.P3] else {
-//            throw SystemError.gpio(.P3)
-//        }
+        guard let export = gpios[.P5] else {
+            throw SystemError.gpio(.P5)
+        }
         
         self.rfid = RFID(spi: spis[0], irqGPIO: irq, waitTime: 3)
         
@@ -63,14 +62,14 @@ class System {
         self.readyLight = Light(gpio: ready)
         self.successLight = Light(gpio: success)
 
-//        self.export = Button(gpio: export)
+        self.exportButton = Button(gpio: export)
         self.file = try FileIO()
         
         // setup
         self.rfid.delegate = self
         self.powerLight.turnOn()
         self.readyLight.turnOn()
-//        self.export.delegate = self
+        self.exportButton.delegate = self
     }
     
     func run() throws {
@@ -109,6 +108,7 @@ extension System: RFIDDelegate {
 
 extension System: ButtonDelegate {
     func buttonDidPush(_ button: Button) {
+        print("hello button pushed")
 //        do {
 //            try file.exportFile()
 //            successLight.turnOn(for: 2)
