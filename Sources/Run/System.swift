@@ -11,6 +11,13 @@ enum SystemError: Error, LocalizedError {
         case .gpio(let name): return "No GPIO '\(name.rawValue)' found"
         }
     }
+    
+    var errorCode: Int32 {
+        switch self {
+        case .noSPIs: return 600
+        case .gpio: return 601
+        }
+    }
 }
 
 class System {
@@ -23,7 +30,7 @@ class System {
     let readyLight: Light
     let successLight: Light
     
-//    // Export button
+    // Export button
     let exportButton: Button
 
     // data holder
@@ -63,6 +70,7 @@ class System {
         self.successLight = Light(gpio: success)
 
         self.exportButton = Button(gpio: export)
+        
         self.file = try FileIO()
         
         // setup
@@ -77,9 +85,16 @@ class System {
         rfid.startScanningForTags()
     }
     
+    func cleanup() {
+        powerLight.cleanup()
+        readyLight.cleanup()
+        successLight.cleanup()
+        exportButton.cleanup()
+        rfid.cleanup()
+    }
+    
     deinit {
-        powerLight.turnOff()
-        readyLight.turnOff()
+        cleanup()
     }
 }
 

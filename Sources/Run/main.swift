@@ -6,10 +6,21 @@ do {
     system = try System()
     print("Running system...")
     try system.run()
-} catch {
+} catch let error as SystemError {
     print("System error:", error.localizedDescription)
-    // TODO: show better error in here to exit code
+    exit(error.errorCode)
+} catch {
+    print("Unknown error:", error.localizedDescription)
     exit(EXIT_FAILURE)
 }
+
+signal(SIGINT, SIG_IGN)
+let sigint = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
+sigint.setEventHandler {
+    print("Something killed me...")
+    system.cleanup()
+    exit(EXIT_SUCCESS)
+}
+sigint.resume()
 
 RunLoop.main.run()

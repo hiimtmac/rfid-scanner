@@ -53,6 +53,11 @@ class RFID {
     
     weak var delegate: RFIDDelegate?
     
+    /// Created new RFID scanner
+    /// - Parameters:
+    ///   - spi: spi to perfom scanning from
+    ///   - irqGPIO: GPIO for inturrupt
+    ///   - waitTime: Amount fo seconds to resume scanning after tag found
     init(spi: SPIInterface, irqGPIO: GPIO, waitTime: TimeInterval) {
         self.spi = spi
         self.irqGPIO = irqGPIO
@@ -99,11 +104,15 @@ class RFID {
         ranging = false
     }
     
-    deinit {
+    func cleanup() {
         stopScanningForTags()
         irqGPIO.direction = .IN
         irqGPIO.value = 0
         irqGPIO.clearListeners()
+    }
+    
+    deinit {
+        cleanup()
     }
     
     private func configure() {

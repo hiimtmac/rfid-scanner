@@ -32,8 +32,12 @@ class Light {
         }
     }
     
-    deinit {
+    func cleanup() {
         gpio.value = 0
         gpio.direction = .IN
+    }
+    
+    deinit {
+        cleanup()
     }
 }

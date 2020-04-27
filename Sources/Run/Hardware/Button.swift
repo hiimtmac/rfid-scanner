@@ -22,9 +22,13 @@ class Button {
         }
     }
     
-    deinit {
+    func cleanup() {
         gpio.value = 0
         gpio.clearListeners()
         gpio.direction = .IN
+    }
+    
+    deinit {
+        cleanup()
     }
 }
