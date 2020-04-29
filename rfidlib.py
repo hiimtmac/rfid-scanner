@@ -58,18 +58,12 @@ class RFID(object):
         self.spi.open(bus, device)
         self.spi.max_speed_hz = speed
 
-        if pin_mode is not None:
-            GPIO.setmode(pin_mode)
-        if pin_rst != 0:
-            GPIO.setup(pin_rst, GPIO.OUT)
-            GPIO.output(pin_rst, 1)
+        GPIO.setmode(pin_mode)
         GPIO.setup(pin_irq, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-        GPIO.add_event_detect(pin_irq, GPIO.FALLING,
-                callback=self.irq_callback)
-        if pin_ce != 0:
-            GPIO.setup(pin_ce, GPIO.OUT)
-            GPIO.output(pin_ce, 1)
-        self.init()
+#        GPIO.add_event_detect(pin_irq, GPIO.FALLING,
+#                callback=self.irq_callback)
+#
+#        self.init()
 
     def init(self):
         self.reset()                    # "soft reset" by writing 0x0F to CommandReg
@@ -79,7 +73,7 @@ class RFID(object):
         self.dev_write(0x2C, 0)         #      "
         self.dev_write(0x15, 0x40)      # TxASKReg - force 100% ASK modulation
         self.dev_write(0x11, 0x3D)      # ModeReg - general settings for Tx and Rx
-        self.dev_write(0x26, (self.antenna_gain<<4))    # RFCfgReg - set Rx's voltage gain factor
+#        self.dev_write(0x26, (self.antenna_gain<<4))    # RFCfgReg - set Rx's voltage gain factor
         self.set_antenna(True)
 
     def spi_transfer(self, data):

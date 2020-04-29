@@ -17,7 +17,7 @@ do {
 signal(SIGINT, SIG_IGN)
 let sigint = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
 sigint.setEventHandler {
-    print("Something killed me...")
+    print() // clear ^C
     system.cleanup()
     exit(EXIT_SUCCESS)
 }

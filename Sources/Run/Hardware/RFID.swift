@@ -9,39 +9,30 @@ protocol RFIDDelegate: AnyObject {
 }
 
 enum RFIDError: Error, LocalizedError {
-    case request(String) // what do you do/mean?
-    case anticoll(String) // should you have multiple?
-    case cardWrite(String) // should you have multipl?
+    case request(Byte) // what do you do/mean?
+    case anticoll(Byte) // should you have multiple?
+    case cardWrite(Byte) // should you have multipl?
+    case selectTag(Byte)
+    case auth(Byte)
+    case read(Byte)
+    case write(Byte)
     
     var errorDescription: String? {
         switch self {
         case .request(let reason): return "ERROR: RFID Tag Request: \(reason)"
         case .anticoll(let reason): return "ERROR: RFID Anticollision: \(reason)"
         case .cardWrite(let reason): return "ERROR: RFID Card Write: \(reason)"
+        case .selectTag(let reason): return "ERROR: RFID Select Tag: \(reason)"
+        case .auth(let reason): return "ERROR: RFID Auth: \(reason)"
+        case .read(let reason): return "ERROR: RFID Read: \(reason)"
+        case .write(let reason): return "ERROR: RFID Write: \(reason)"
         }
     }
 }
 
 class RFID {
     
-    /// pin_irq = 18
     private let irqGPIO: GPIO
-    /// mode_idle = 0x00
-    private let mode_idle: Byte = 0x00
-    /// mode_transrec = 0x0C
-    private let mode_transrec: Byte = 0x0C
-    /// mode_reset = 0x0F
-    private let mode_reset: Byte = 0x0F
-    /// mode_crc = 0x03
-    private let mode_crc: Byte = 0x03
-    /// act_anticl = 0x93
-    private let act_anticl: Byte = 0x93
-    /// act_select = 0x93
-    private let act_select: Byte = 0x93
-    /// reg_tx_control = 0x14
-    private let reg_tx_control: Byte = 0x14
-    /// length = 16
-    private let length: Byte = 16
     /// antenna_gain = 0x04
     private var antenna_gain: Byte = 0x04
     /// is scanning for tags
@@ -53,20 +44,119 @@ class RFID {
     
     weak var delegate: RFIDDelegate?
     
+    private let MAX_LEN: Int                = 16
+    
+    private let PCD_IDLE: Byte              = 0x00
+    private let PCD_AUTHENT: Byte           = 0x0E
+    private let PCD_RECEIVE: Byte           = 0x08
+    private let PCD_TRANSMIT: Byte          = 0x04
+    private let PCD_TRANSCEIVE: Byte        = 0x0C
+    private let PCD_RESETPHASE: Byte        = 0x0F
+    private let PCD_CALCCRC: Byte           = 0x03
+    
+    private let PICC_REQIDL: Byte           = 0x26
+    private let PICC_REQALL: Byte           = 0x52
+    private let PICC_ANTICOLL: Byte         = 0x93
+    private let PICC_SElECTTAG: Byte        = 0x93
+    private let PICC_AUTHENT1A: Byte        = 0x60
+    private let PICC_AUTHENT1B: Byte        = 0x61
+    private let PICC_READ: Byte             = 0x30
+    private let PICC_WRITE: Byte            = 0xA0
+    private let PICC_DECREMENT: Byte        = 0xC0
+    private let PICC_INCREMENT: Byte        = 0xC1
+    private let PICC_RESTORE: Byte          = 0xC2
+    private let PICC_TRANSFER: Byte         = 0xB0
+    private let PICC_HALT: Byte             = 0x50
+    
+    private let MI_OK: Byte                 = 0
+    private let MI_NOTAGERR: Byte           = 1
+    private let MI_ERR: Byte                = 2
+    
+    private let Reserved00: Byte            = 0x00
+    private let CommandReg: Byte            = 0x01
+    private let CommIEnReg: Byte            = 0x02
+    private let DivlEnReg: Byte             = 0x03
+    private let CommIrqReg: Byte            = 0x04
+    private let DivIrqReg: Byte             = 0x05
+    private let ErrorReg: Byte              = 0x06
+    private let Status1Reg: Byte            = 0x07
+    private let Status2Reg: Byte            = 0x08
+    private let FIFODataReg: Byte           = 0x09
+    private let FIFOLevelReg: Byte          = 0x0A
+    private let WaterLevelReg: Byte         = 0x0B
+    private let ControlReg: Byte            = 0x0C
+    private let BitFramingReg: Byte         = 0x0D
+    private let CollReg: Byte               = 0x0E
+    private let Reserved01: Byte            = 0x0F
+    
+    private let Reserved10: Byte            = 0x10
+    private let ModeReg: Byte               = 0x11
+    private let TxModeReg: Byte             = 0x12
+    private let RxModeReg: Byte             = 0x13
+    private let TxControlReg: Byte          = 0x14
+    private let TxAutoReg: Byte             = 0x15
+    private let TxSelReg: Byte              = 0x16
+    private let RxSelReg: Byte              = 0x17
+    private let RxThresholdReg: Byte        = 0x18
+    private let DemodReg: Byte              = 0x19
+    private let Reserved11: Byte            = 0x1A
+    private let Reserved12: Byte            = 0x1B
+    private let MifareReg: Byte             = 0x1C
+    private let Reserved13: Byte            = 0x1D
+    private let Reserved14: Byte            = 0x1E
+    private let SerialSpeedReg: Byte        = 0x1F
+    
+    private let Reserved20: Byte            = 0x20
+    private let CRCResultRegM: Byte         = 0x21
+    private let CRCResultRegL: Byte         = 0x22
+    private let Reserved21: Byte            = 0x23
+    private let ModWidthReg: Byte           = 0x24
+    private let Reserved22: Byte            = 0x25
+    private let RFCfgReg: Byte              = 0x26
+    private let GsNReg: Byte                = 0x27
+    private let CWGsPReg: Byte              = 0x28
+    private let ModGsPReg: Byte             = 0x29
+    private let TModeReg: Byte              = 0x2A
+    private let TPrescalerReg: Byte         = 0x2B
+    private let TReloadRegH: Byte           = 0x2C
+    private let TReloadRegL: Byte           = 0x2D
+    private let TCounterValueRegH: Byte     = 0x2E
+    private let TCounterValueRegL: Byte     = 0x2F
+    
+    private let Reserved30: Byte            = 0x30
+    private let TestSel1Reg: Byte           = 0x31
+    private let TestSel2Reg: Byte           = 0x32
+    private let TestPinEnReg: Byte          = 0x33
+    private let TestPinValueReg: Byte       = 0x34
+    private let TestBusReg: Byte            = 0x35
+    private let AutoTestReg: Byte           = 0x36
+    private let VersionReg: Byte            = 0x37
+    private let AnalogTestReg: Byte         = 0x38
+    private let TestDAC1Reg: Byte           = 0x39
+    private let TestDAC2Reg: Byte           = 0x3A
+    private let TestADCReg: Byte            = 0x3B
+    private let Reserved31: Byte            = 0x3C
+    private let Reserved32: Byte            = 0x3D
+    private let Reserved33: Byte            = 0x3E
+    private let Reserved34: Byte            = 0x3F
+    
     /// Created new RFID scanner
     /// - Parameters:
     ///   - spi: spi to perfom scanning from
     ///   - irqGPIO: GPIO for inturrupt
     ///   - waitTime: Amount fo seconds to resume scanning after tag found
     init(spi: SPIInterface, irqGPIO: GPIO, waitTime: TimeInterval) {
-        self.spi = spi
-        self.irqGPIO = irqGPIO
-        self.waitTime = waitTime
-        
         irqGPIO.direction = .IN
         irqGPIO.pull = .up
         
+        self.spi = spi
+        self.irqGPIO = irqGPIO
+        self.waitTime = waitTime
         self.configure()
+    }
+    
+    deinit {
+        cleanup()
     }
     
     /// Dispatches onto custom utility queue, where it blocks
@@ -81,20 +171,38 @@ class RFID {
             guard let self = self else { return }
             while self.ranging {
                 print("Wait for tag...")
+                // this will block until iqr is triggered
                 self.waitForTag()
                 
-                do {
-                    let _ = try self.request()
-                    let uid = try self.anticoll()
-                    DispatchQueue.main.async {
-                        self.delegate?.rfidDidScanTag(self, withResult: .success(uid))
+                // try a bunch of times before bailing out
+                let tries = 100
+                for i in 1...tries {
+                    do {
+                        // scan for cards
+                        let _ = try self.request()
+                        
+                        // get the UID of the card
+                        let uid = try self.anticoll()
+                        
+                        // This is the default key for authentication
+//                        let key: [Byte] = [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+                        
+                        // Select the scanned tag
+//                        let tag = try self.selectTag(serNum: uid)
+                        
+                        DispatchQueue.main.async {
+                            self.delegate?.rfidDidScanTag(self, withResult: .success(uid))
+                        }
+                        sleep(UInt32(self.waitTime))
+                        break
+                    } catch {
+                        if i == tries {
+                            DispatchQueue.main.async {
+                                self.delegate?.rfidDidScanTag(self, withResult: .failure(error))
+                            }
+                            sleep(1)
+                        }
                     }
-                    sleep(UInt32(self.waitTime))
-                } catch {
-                    DispatchQueue.main.async {
-                        self.delegate?.rfidDidScanTag(self, withResult: .failure(error))
-                    }
-                    sleep(1)
                 }
             }
         }
@@ -104,36 +212,95 @@ class RFID {
         ranging = false
     }
     
+    private func configure() {
+        self.reset()                                            // "soft reset" by writing 0x0F to CommandReg
+        
+        self.devWrite(address: TModeReg, value: 0x8D)           // TModeReg - timer settings
+        self.devWrite(address: TPrescalerReg, value: 0x3E)      // TPrescalerReg - set ftimer = 13.56MHz/(2*TPrescaler+2)
+        self.devWrite(address: TReloadRegL, value: 30)          // TReloadReg - set timer reload value
+        self.devWrite(address: TReloadRegH, value: 0)
+        self.devWrite(address: TxAutoReg, value: 0x40)          // TxASKReg - force 100% ASK modulation
+        self.devWrite(address: ModeReg, value: 0x3D)            // ModeReg - general settings for Tx and Rx
+        
+//        self.devWrite(address: 0x26, value: antenna_gain << 4)  // RFCfgReg - set Rx's voltage gain factor
+        self.setAntennaOn()
+    }
+    
     func cleanup() {
         stopScanningForTags()
         irqGPIO.direction = .IN
         irqGPIO.value = 0
         irqGPIO.clearListeners()
-    }
-    
-    deinit {
-        cleanup()
-    }
-    
-    private func configure() {
-        self.reset()                                            // "soft reset" by writing 0x0F to CommandReg
-        self.devWrite(address: 0x2A, value: 0x8D)               // TModeReg - timer settings
-        self.devWrite(address: 0x2B, value: 0x3E)               // TPrescalerReg - set ftimer = 13.56MHz/(2*TPrescaler+2)
-        self.devWrite(address: 0x2D, value: 30)                 // TReloadReg - set timer reload value
-        self.devWrite(address: 0x2C, value: 0)
-        self.devWrite(address: 0x15, value: 0x40)               // TxASKReg - force 100% ASK modulation
-        self.devWrite(address: 0x11, value: 0x3D)               // ModeReg - general settings for Tx and Rx
-        self.devWrite(address: 0x26, value: antenna_gain << 4)  // RFCfgReg - set Rx's voltage gain factor
-        self.setAntenna(true)
+        setAntennaOff()
     }
     
     private func devWrite(address: Byte, value: Byte) {
-        spi.sendData([(address << 1) & 0x7E, value], frequencyHz: 1_000_000)
+        spi.sendData([
+            (address << 1) & 0x7E,
+            value
+        ], frequencyHz: 1_000_000)
     }
     
+//    func write(address: Byte, data: Bytes) throws {
+//        var buff1: [Byte] = [
+//            PICC_WRITE,
+//            address
+//        ]
+//
+//        let crc1 = calulateCRC(data: buff1)
+//        buff1.append(crc1[0])
+//        buff1.append(crc1[1])
+//
+//        let (backData1, backLen1) = try cardWrite(command: PCD_TRANSCEIVE, data: buff1)
+//
+//        if backLen1 != 4 || (backData1[0] & 0x0F) != 0x0A {
+//            throw RFIDError.write(MI_ERR)
+//        }
+//
+//        print("\(backLen1) backdata & 0x0F == 0x0A \(backData1[0] & 0x0F)")
+//
+//        var buff2: [Byte] = []
+//        for i in 0 ..< 16 {
+//            buff2.append(data[i])
+//        }
+//
+//        let crc2 = calulateCRC(data: buff2)
+//        buff2.append(crc2[0])
+//        buff2.append(crc2[1])
+//
+//        let (backData2, backLen2) = try cardWrite(command: PCD_TRANSCEIVE, data: buff2)
+//
+//        if backLen2 != 4 || (backData2[0] & 0x0F) != 0x0A {
+//            throw RFIDError.write(MI_ERR)
+//        }
+//    }
+    
     private func devRead(address: Byte) -> Byte {
-        return spi.sendDataAndRead([((address << 1) & 0x7E) | 0x80, 0], frequencyHz: 1_000_000)[1]
+        spi.sendDataAndRead([
+            ((address << 1) & 0x7E) | 0x80,
+            0
+        ], frequencyHz: 1_000_000)[1]
     }
+    
+//    func read(address: Byte) throws -> Bytes {
+//        var recvData: [Byte] = [
+//            PICC_READ,
+//            address
+//        ]
+//
+//        let pOut = calulateCRC(data: recvData)
+//        recvData.append(pOut[0])
+//        recvData.append(pOut[1])
+//
+//        let (backData, _) = try cardWrite(command: PCD_TRANSCEIVE, data: recvData)
+//
+//        if backData.count == 16 {
+//            print("Sector \(address) -> \(backData.map { String(format: "%02hhx", $0) }.joined(separator: ", "))")
+//            return backData
+//        } else {
+//            throw RFIDError.read(MI_ERR)
+//        }
+//    }
     
     private func setBitmask(address: Byte, mask: Byte) {
         let current = devRead(address: address)
@@ -145,15 +312,15 @@ class RFID {
         devWrite(address: address, value: current & ~mask)
     }
     
-    private func setAntenna(_ bool: Bool) {
-        if bool {
-            let current = devRead(address: reg_tx_control)
-            if !((current & 0x03) == 1) {
-                setBitmask(address: reg_tx_control, mask: 0x03)
-            }
-        } else {
-            clearBitmask(address: reg_tx_control, mask: 0x03)
+    private func setAntennaOn() {
+        let current = devRead(address: TxControlReg)
+        if ~(current & 0x03) != 0 {
+            setBitmask(address: TxControlReg, mask: 0x03)
         }
+    }
+    
+    private func setAntennaOff() {
+        clearBitmask(address: TxControlReg, mask: 0x03)
     }
     
     private func setAntennaGain(gain: Byte) {
@@ -164,7 +331,7 @@ class RFID {
     }
     
     private func reset() {
-        devWrite(address: 0x01, value: mode_reset)
+        devWrite(address: CommandReg, value: PCD_RESETPHASE)
     }
     
     /// This function is synchronous and will block its thread until
@@ -194,240 +361,178 @@ class RFID {
         configure()
     }
     
-    func request(mode: Byte = 0x26) throws -> Byte {
-        devWrite(address: 0x0D, value: 0x07) // start transmission
-        
-        var err = "Request error"
-        
-        for i in 0...99 {
-            do {
-                let (_, backBits) = try cardWrite(data: [mode])
-                if backBits != 0x10 {
-                    err = "Bad back bits: \(backBits) != 0x10"
-                } else {
-                    return backBits
-                }
-            } catch {
-                err = error.localizedDescription
-            }
-            
-            if i == 99 {
-                throw RFIDError.request("No bueno - request did not succeed in 100 tries")
-            }
+    private func cardWrite(command: Byte, data: Bytes) throws -> (backData: Bytes, backLen: Int) {
+        var irqEn: Byte = 0x00
+        var waitIRq: Byte = 0x00
+
+        if command == PCD_AUTHENT {
+            irqEn = 0x12
+            waitIRq = 0x10
         }
-        
-        throw RFIDError.request(err)
-    }
-    
-    func anticoll() throws -> Bytes {
-        devWrite(address: 0x0D, value: 0x00) // what do you do
-        
-        var err = "Anticol error"
-        
-        for i in 0...4 {
-            do {
-                let (backData, _) = try cardWrite(data: [act_anticl, 0x20]) // why
-                
-                guard backData.count == 5 else {
-                    throw RFIDError.anticoll("Backdata count \(backData.count) != 5")
-                }
-                
-                var serialNumberCheck: Byte = 0x00
-                
-                (0...3).forEach { i in
-                    serialNumberCheck = serialNumberCheck ^ backData[i]
-                }
-                
-                if serialNumberCheck != backData[4] {
-                    err = "serialNumberCheck != backData[4]"
-                } else {
-                    return backData
-                }
-                
-                if i == 4 {
-                    throw RFIDError.anticoll("No bueno - anticoll did not succeed in 100 tries")
-                }
-            } catch {
-                err = error.localizedDescription
-            }
+
+        if command == PCD_TRANSCEIVE {
+            irqEn = 0x77
+            waitIRq = 0x30
         }
-        
-        throw RFIDError.anticoll(err)
-    }
-    
-    // https://www.programiz.com/swift-programming/bitwise-operators
-    // https://developerinsider.co/advanced-operators-bitwise-by-example-swift-programming-language/
-    func cardWrite(data: Bytes) throws -> (Bytes, Byte) {
-        devWrite(address: 0x02, value: 0x77 | 0x80)      // enable IRQs: timer, error, low alert, idle, rx, tx
-        clearBitmask(address: 0x04, mask: 0x80)         // clear interrupts
-        setBitmask(address: 0x0A, mask: 0x80)           // clear FIFO
-        devWrite(address: 0x01, value: mode_idle)       // put chip in idle mode
-        
+
+        devWrite(address: CommIEnReg, value: irqEn | 0x80)
+        clearBitmask(address: CommIrqReg, mask: 0x80)
+        setBitmask(address: FIFOLevelReg, mask: 0x80)
+        devWrite(address: CommandReg, value: PCD_IDLE)
+
         data.forEach { byte in
-            devWrite(address: 0x09, value: byte)        // write data to FIFO
+            devWrite(address: FIFODataReg, value: byte)
         }
-        
-        devWrite(address: 0x01, value: mode_transrec)   // set desired mode of operation
-        setBitmask(address: 0x0D, mask: 0x80)           // start transmission
-        
-        // 2000 in python, seems arbitrary just so it doesnt hang forever
+
+        devWrite(address: CommandReg, value: command)
+
+        if command == PCD_TRANSCEIVE {
+            setBitmask(address: BitFramingReg, mask: 0x80)
+        }
+
         var i = 2000
         var n: Byte = 0x00
-        while true {
-            n = devRead(address: 0x04) // poll IRQs
+        repeat {
+            n = devRead(address: CommIrqReg)
             i -= 1
-            
-            let a = ~Int8(n & 0x01) // python is treating this as an Int not UInt
-            let b = ~Int8(n & 0x30) // python is treating this as an Int not UInt
-            
-            if ~(a & b) != 0 {
-                break
-            }
-        }
-        
-        clearBitmask(address: 0x0D, mask: 0x80)
-        
-        var backData: Bytes = []
-        var backLength: Byte = 0x00
-        
-        if i != 0 {
-            if (devRead(address: 0x06) & 0x1B) != 0x00 {
-                throw RFIDError.cardWrite("E2")
-            }
-            
-            if (n & 0x77 & 0x01) != 0x00 {
-                throw RFIDError.cardWrite("E1: time out")
-            }
-            
-            n = devRead(address: 0x0A)
-            
-            let lastBits = devRead(address: 0x0C) & 0x07
-            
-            if lastBits != 0x00 {
-                backLength = (n - 1) * 8 + lastBits
-            } else {
-                backLength = n * 8
-            }
-            
-            if n == 0x00 {
-                n = 1
-            }
-            
-            if n > length {
-                n = length
-            }
-            
-            (0..<n).forEach { _ in
-                let byte = devRead(address: 0x09)
-                backData.append(byte)
-            }
-        }
-        
-        return (backData, backLength)
-    }
-    
-    // MARK: - Todo
-    
-    // TODO: figure out if we want to use this
-    /* dont know if we use you
-    /// ```
-    /// def calculate_crc(self, data):
-    ///     self.clear_bitmask(0x05, 0x04)
-    ///     self.set_bitmask(0x0A, 0x80)
-    ///
-    ///     for i in range(len(data)):
-    ///         self.dev_write(0x09, data[i])
-    ///     self.dev_write(0x01, self.mode_crc)
-    ///
-    ///     i = 255
-    ///     while True:
-    ///         n = self.dev_read(0x05)
-    ///         i -= 1
-    ///         if not ((i != 0) and not (n & 0x04)):
-    ///             break
-    ///
-    ///     ret_data = []
-    ///     ret_data.append(self.dev_read(0x22))
-    ///     ret_data.append(self.dev_read(0x21))
-    ///
-    ///     return ret_data
-    /// ```
-    func calculateCrc(data: Bytes) -> Bytes {
-        print("caclulate crc: \(data)")
-        clearBitmask(address: 0x05, mask: 0x04)
-        setBitmask(address: 0x0A, mask: 0x80)
-        
-        data.forEach { byte in
-            devWrite(address: 0x09, value: byte)
-        }
-        
-        devWrite(address: 0x01, value: mode_crc)
-        
-        var i = 255
-        while true {
-            let n = devRead(address: 0x05)
-            i -= 1
-            
-            if !((i != 0) && !((n & 0x04) == 1)) {
-                break
-            }
-        }
-        
-        var data = Bytes()
-        data.append(devRead(address: 0x22))
-        data.append(devRead(address: 0x21))
-        
-        return data
-    }
-    
-    /// ```
-    /// def select_tag(self, uid):
-    ///     """
-    ///     Selects tag for further usage.
-    ///     uid -- list or tuple with four bytes tag ID
-    ///     Returns error state.
-    ///     """
-    ///     back_data = []
-    ///     buf = []
-    ///
-    ///     buf.append(self.act_select)
-    ///     buf.append(0x70)
-    ///
-    ///     for i in range(5):
-    ///         buf.append(uid[i])
-    ///
-    ///     crc = self.calculate_crc(buf)
-    ///     buf.append(crc[0])
-    ///     buf.append(crc[1])
-    ///
-    ///     (error, back_data, back_length) = self.card_write(self.mode_transrec, buf)
-    ///
-    ///     if (not error) and (back_length == 0x18):
-    ///         return False
-    ///     else:
-    ///         return True
-    /// ```
-    func selectTag(uid: Bytes) -> Bool {
-        print("select tag: \(uid)")
-        var buffer = Bytes()
-        buffer.append(act_select)
-        buffer.append(0x70)
-        
-        (0...4).forEach { i in
-            buffer.append(uid[i])
-        }
-        
-        let crc = calculateCrc(data: buffer)
-        buffer.append(crc[0])
-        buffer.append(crc[1])
-        
-        let (_, backLength, error) = cardWrite(command: mode_transrec, data: buffer)
-        if (!error) && (backLength == 0x18) {
-            return false
-        } else {
-            return true
-        }
-    }
-    */
-}
+        } while !(i == 0 || (n & 0x01) != 0 || (n & waitIRq) != 0)
 
+        clearBitmask(address: BitFramingReg, mask: 0x80)
+
+        if i != 0 && (devRead(address: ErrorReg) & 0x1B) == 0x00 {
+            if (n & irqEn & 0x01) != 0 {
+                throw RFIDError.cardWrite(MI_NOTAGERR)
+            }
+
+            var backData: [Byte] = []
+            var backLen = 0
+            
+            if command == PCD_TRANSCEIVE {
+                var size = Int(devRead(address: FIFOLevelReg))
+                let lastBits = Int(devRead(address: ControlReg) & 0x07)
+
+                if lastBits != 0 {
+                    backLen = (size - 1) * 8 + lastBits
+                } else {
+                    backLen = size * 8
+                }
+
+                if size == 0 { size = 1 }
+                if size > MAX_LEN { size = MAX_LEN }
+                for _ in 0 ..< size {
+                    backData.append(devRead(address: FIFODataReg))
+                }
+            }
+            
+            return (backData: backData, backLen: backLen)
+        } else {
+            throw RFIDError.cardWrite(MI_ERR)
+        }
+    }
+    
+    /// gets tag type
+    private func request(mode: Byte = 0x26) throws -> Int {
+        devWrite(address: BitFramingReg, value: 0x07) // start transmission
+        
+        let (_, backLen) = try cardWrite(command: PCD_TRANSCEIVE, data: [mode])
+        
+        if backLen != 0x10 {
+            throw RFIDError.request(MI_OK)
+        } else {
+            return backLen
+        }
+    }
+    
+    /// gets uid of tag
+    private func anticoll() throws -> Bytes {
+        devWrite(address: BitFramingReg, value: 0x00)
+        
+        let (backData, _) = try cardWrite(command: PCD_TRANSCEIVE, data: [PICC_ANTICOLL, 0x20])
+        
+        guard backData.count == 5, backData.dropLast().reduce(0, ^) == backData.last else {
+            throw RFIDError.anticoll(MI_ERR)
+        }
+        
+        return backData
+    }
+    
+//    private func calulateCRC(data: [Byte]) -> [Byte] {
+//        clearBitmask(address: DivIrqReg, mask: 0x04)
+//        setBitmask(address: FIFOLevelReg, mask: 0x80)
+//
+//        data.forEach { byte in
+//            devWrite(address: FIFODataReg, value: byte)
+//        }
+//
+//        devWrite(address: CommandReg, value: PCD_CALCCRC)
+//
+//        var i = 0xFF
+//        var n: Byte
+//        repeat {
+//            n = devRead(address: DivIrqReg)
+//            i = i - 1
+//        } while ((i != 0) && (n & 0x04) == 0)
+//
+//        return [
+//            devRead(address: CRCResultRegL),
+//            devRead(address: CRCResultRegM)
+//        ]
+//    }
+    
+//    private func selectTag(serNum: Bytes) throws -> Byte {
+//        var buf: [Byte] = [PICC_SElECTTAG, 0x70]
+//        for i in 0 ..< 5 {
+//            buf.append(serNum[i])
+//        }
+//
+//        let pOut = calulateCRC(data: buf)
+//        buf.append(pOut[0])
+//        buf.append(pOut[1])
+//
+//        let (backData, backLen) = try cardWrite(command: PCD_TRANSCEIVE, data: buf)
+//
+//        if backLen == 0x18 {
+//            print("Size: \(backData[0])")
+//            return backData[0]
+//        } else {
+//            throw RFIDError.selectTag(MI_ERR)
+//        }
+//    }
+    
+//    private func auth(authMode: Byte, blockAddr: Byte, sectorkey: [Byte], serNum: [Byte]) throws {
+//        var buff: [Byte] = []
+//
+//        // First byte should be the authMode (A or B)
+//        buff.append(authMode)
+//
+//        // Second byte is the trailerBlock (usually 7)
+//        buff.append(blockAddr)
+//
+//        // Now we need to append the authKey which usually is 6 bytes of 0xFF
+//        buff.append(contentsOf: sectorkey)
+//
+//        // Next we append the first 4 bytes of the UID
+//        for i in 0 ..< 4 {
+//            buff.append(serNum[i])
+//        }
+//
+//        // Now we start the authentication itself
+//        let (_, _) = try cardWrite(command: PCD_AUTHENT, data: buff)
+//
+//        if (devRead(address: Status2Reg) & 0x08) == 0 {
+//            print("AUTH ERROR(status2reg & 0x08) != 0")
+//            throw RFIDError.auth(MI_ERR)
+//        }
+//    }
+    
+//    private func stopCrypto() {
+//        clearBitmask(address: Status2Reg, mask: 0x08)
+//    }
+    
+//    private func dumpClassic1K(key: [Byte], uid: [Byte]) throws {
+//        for i: Byte in 0 ..< 64 {
+//            try auth(authMode: PICC_AUTHENT1A, blockAddr: i, sectorkey: key, serNum: uid)
+//            let _ = try read(address: i)
+//        }
+//    }
+}

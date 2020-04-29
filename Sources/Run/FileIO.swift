@@ -49,35 +49,10 @@ class FileIO {
         try writer.write(row: values)
     }
     
-    /// Testing this out...
-    /// - Important
-    /// This method returns nil on platforms other than macOS.
     func exportFile() throws {
-        let urls = fm.mountedVolumeURLs(includingResourceValuesForKeys: nil, options: .skipHiddenVolumes)
-        guard let first = urls?.first else {
-            throw FileIOError.noUSB
-        }
-
-        let destination = first
-            .appendingPathComponent("rfid-scan-data")
-            .appendingPathExtension("csv")
-        
+        // where usb drive will show up from `usbmount` program
+        let usbURL = URL(fileURLWithPath: "/media/usb0", isDirectory: true)
+        let destination = usbURL.appendingPathComponent(fileURL.lastPathComponent)
         try fm.copyItem(at: fileURL, to: destination)
-        print(fileURL, destination)
     }
-    
-//    func exportFile() throws {
-//        // usually where usb on pi shows up
-//        let mediaURL = URL(fileURLWithPath: "/media/ubuntu", isDirectory: true)
-//        // get url to any plugged in
-//        let urls = try fm.contentsOfDirectory(at: mediaURL, includingPropertiesForKeys: nil, options: .skipsHiddenFiles)
-//        // take one (assume only one to be plugged in)
-//        guard let first = urls.first else {
-//            throw FileIOError.noUSB
-//        }
-//
-//        let destination = first.appendingPathComponent("rfid-scan-data")
-//        try fm.copyItem(at: fileURL, to: destination)
-//        print(fileURL, destination)
-//    }
 }
