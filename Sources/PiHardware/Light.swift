@@ -1,18 +1,18 @@
 import Foundation
 import SwiftyGPIO
 
-class Light {
+public class Light {
     
-    let gpio: GPIO
+    public let gpio: GPIO
     
-    init(gpio: GPIO) {
+    public init(gpio: GPIO) {
         self.gpio = gpio
         
         gpio.direction = .OUT
         gpio.value = 0
     }
     
-    func turnOn(for time: TimeInterval? = nil) {
+    public func turnOn(for time: TimeInterval? = nil) {
         gpio.value = 1
         
         if let time = time {
@@ -22,7 +22,7 @@ class Light {
         }
     }
     
-    func turnOff(for time: TimeInterval? = nil) {
+    public func turnOff(for time: TimeInterval? = nil) {
         gpio.value = 0
         
         if let time = time {
@@ -32,7 +32,7 @@ class Light {
         }
     }
     
-    func cleanup() {
+    public func cleanup() {
         gpio.value = 0
         gpio.direction = .IN
     }

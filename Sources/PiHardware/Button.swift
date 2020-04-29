@@ -1,16 +1,16 @@
 import Foundation
 import SwiftyGPIO
 
-protocol ButtonDelegate: AnyObject {
+public protocol ButtonDelegate: AnyObject {
     func buttonDidPush(_ button: Button)
 }
 
-class Button {
+public class Button {
     
-    let gpio: GPIO
-    weak var delegate: ButtonDelegate?
+    public let gpio: GPIO
+    public weak var delegate: ButtonDelegate?
     
-    init(gpio: GPIO) {
+    public init(gpio: GPIO) {
         self.gpio = gpio
         
         gpio.direction = .IN
@@ -22,7 +22,7 @@ class Button {
         }
     }
     
-    func cleanup() {
+    public func cleanup() {
         gpio.value = 0
         gpio.clearListeners()
         gpio.direction = .IN

@@ -1,18 +1,19 @@
 import Foundation
 import SwiftyGPIO
+import PiHardware
 
-enum SystemError: Error, LocalizedError {
+public enum SystemError: Error, LocalizedError {
     case noSPIs
     case gpio(GPIOName)
     
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .noSPIs: return "No hardware SPIs found"
         case .gpio(let name): return "No GPIO '\(name.rawValue)' found"
         }
     }
     
-    var errorCode: Int32 {
+    public var errorCode: Int32 {
         switch self {
         case .noSPIs: return 600
         case .gpio: return 601
@@ -20,7 +21,7 @@ enum SystemError: Error, LocalizedError {
     }
 }
 
-class System {
+public class System {
     
     // RFID Scanner
     let rfid: RFID
@@ -36,7 +37,7 @@ class System {
     // data holder
     let file: FileIO
     
-    init() throws {
+    public init() throws {
         guard let spis = SwiftyGPIO.hardwareSPIs(for: .RaspberryPi3) else {
             throw SystemError.noSPIs
         }
@@ -80,12 +81,12 @@ class System {
         self.exportButton.delegate = self
     }
     
-    func run() throws {
+    public func run() throws {
         print("Start scanning for tags...")
         rfid.startScanningForTags()
     }
     
-    func cleanup() {
+    public func cleanup() {
         powerLight.cleanup()
         readyLight.cleanup()
         successLight.cleanup()
@@ -99,7 +100,7 @@ class System {
 }
 
 extension System: RFIDDelegate {
-    func rfidDidScanTag(_ rfid: RFID, withResult result: Result<Bytes, Error>) {
+    public func rfidDidScanTag(_ rfid: RFID, withResult result: Result<Bytes, Error>) {
         switch result {
         case .success(let bytes):
             let tag = bytes
@@ -123,7 +124,7 @@ extension System: RFIDDelegate {
 }
 
 extension System: ButtonDelegate {
-    func buttonDidPush(_ button: Button) {
+    public func buttonDidPush(_ button: Button) {
         print("hello button pushed")
         do {
             try file.exportFile()

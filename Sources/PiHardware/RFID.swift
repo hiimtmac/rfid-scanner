@@ -1,14 +1,14 @@
 import Foundation
 import SwiftyGPIO
 
-typealias Byte = UInt8
-typealias Bytes = [Byte]
+public typealias Byte = UInt8
+public typealias Bytes = [Byte]
 
-protocol RFIDDelegate: AnyObject {
+public protocol RFIDDelegate: AnyObject {
     func rfidDidScanTag(_ rfid: RFID, withResult result: Result<Bytes, Error>)
 }
 
-enum RFIDError: Error, LocalizedError {
+public enum RFIDError: Error, LocalizedError {
     case request(Byte) // what do you do/mean?
     case anticoll(Byte) // should you have multiple?
     case cardWrite(Byte) // should you have multipl?
@@ -17,7 +17,7 @@ enum RFIDError: Error, LocalizedError {
     case read(Byte)
     case write(Byte)
     
-    var errorDescription: String? {
+    public var errorDescription: String? {
         switch self {
         case .request(let reason): return "ERROR: RFID Tag Request: \(reason)"
         case .anticoll(let reason): return "ERROR: RFID Anticollision: \(reason)"
@@ -30,7 +30,7 @@ enum RFIDError: Error, LocalizedError {
     }
 }
 
-class RFID {
+public class RFID {
     
     private let irqGPIO: GPIO
     /// antenna_gain = 0x04
@@ -38,11 +38,11 @@ class RFID {
     /// is scanning for tags
     private var ranging = false
     
-    let spi: SPIInterface
+    public let spi: SPIInterface
     
-    let waitTime: TimeInterval
+    public let waitTime: TimeInterval
     
-    weak var delegate: RFIDDelegate?
+    public weak var delegate: RFIDDelegate?
     
     private let MAX_LEN: Int                = 16
     
@@ -145,7 +145,7 @@ class RFID {
     ///   - spi: spi to perfom scanning from
     ///   - irqGPIO: GPIO for inturrupt
     ///   - waitTime: Amount fo seconds to resume scanning after tag found
-    init(spi: SPIInterface, irqGPIO: GPIO, waitTime: TimeInterval) {
+    public init(spi: SPIInterface, irqGPIO: GPIO, waitTime: TimeInterval) {
         irqGPIO.direction = .IN
         irqGPIO.pull = .up
         
@@ -163,7 +163,7 @@ class RFID {
     /// on `waitForTag()` until a tag is found, then attempts
     /// to read the tag, signalling the delegate on success or error
     /// back on the main queue
-    func startScanningForTags() {
+    public func startScanningForTags() {
         ranging = true
         
         let queue = DispatchQueue.init(label: "com.hiimtmac.scanner", qos: .utility)
@@ -208,7 +208,7 @@ class RFID {
         }
     }
     
-    func stopScanningForTags() {
+    public func stopScanningForTags() {
         ranging = false
     }
     
@@ -226,7 +226,7 @@ class RFID {
         self.setAntennaOn()
     }
     
-    func cleanup() {
+    public func cleanup() {
         stopScanningForTags()
         irqGPIO.direction = .IN
         irqGPIO.value = 0
@@ -312,32 +312,32 @@ class RFID {
         devWrite(address: address, value: current & ~mask)
     }
     
-    private func setAntennaOn() {
+    func setAntennaOn() {
         let current = devRead(address: TxControlReg)
         if ~(current & 0x03) != 0 {
             setBitmask(address: TxControlReg, mask: 0x03)
         }
     }
     
-    private func setAntennaOff() {
+    func setAntennaOff() {
         clearBitmask(address: TxControlReg, mask: 0x03)
     }
     
-    private func setAntennaGain(gain: Byte) {
+    func setAntennaGain(gain: Byte) {
         // only set safe values to antenna
         if (0x00...0x07).contains(gain) {
             antenna_gain = gain
         }
     }
     
-    private func reset() {
+    func reset() {
         devWrite(address: CommandReg, value: PCD_RESETPHASE)
     }
     
     /// This function is synchronous and will block its thread until
     /// it finds a tag, which will release its semaphore in the IRQ GPIO
     /// `onFalling(_:)` method
-    private func waitForTag() {
+    func waitForTag() {
         let semaphore = DispatchSemaphore(value: 0)
         
         irqGPIO.onFalling { gpio in
@@ -361,7 +361,7 @@ class RFID {
         configure()
     }
     
-    private func cardWrite(command: Byte, data: Bytes) throws -> (backData: Bytes, backLen: Int) {
+    func cardWrite(command: Byte, data: Bytes) throws -> (backData: Bytes, backLen: Int) {
         var irqEn: Byte = 0x00
         var waitIRq: Byte = 0x00
 
@@ -431,7 +431,7 @@ class RFID {
     }
     
     /// gets tag type
-    private func request(mode: Byte = 0x26) throws -> Int {
+    func request(mode: Byte = 0x26) throws -> Int {
         devWrite(address: BitFramingReg, value: 0x07) // start transmission
         
         let (_, backLen) = try cardWrite(command: PCD_TRANSCEIVE, data: [mode])
@@ -444,7 +444,7 @@ class RFID {
     }
     
     /// gets uid of tag
-    private func anticoll() throws -> Bytes {
+    func anticoll() throws -> Bytes {
         devWrite(address: BitFramingReg, value: 0x00)
         
         let (backData, _) = try cardWrite(command: PCD_TRANSCEIVE, data: [PICC_ANTICOLL, 0x20])
