@@ -44,8 +44,8 @@ public class System {
         
         let gpios = SwiftyGPIO.GPIOs(for: .RaspberryPi3)
         
-        guard let irq = gpios[.P24] else {
-            throw SystemError.gpio(.P24)
+        guard let irq = gpios[.P4] else {
+            throw SystemError.gpio(.P4)
         }
         
         guard let power = gpios[.P13] else {

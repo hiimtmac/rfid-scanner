@@ -146,9 +146,6 @@ public class RFID {
     ///   - irqGPIO: GPIO for inturrupt
     ///   - waitTime: Amount fo seconds to resume scanning after tag found
     public init(spi: SPIInterface, irqGPIO: GPIO, waitTime: TimeInterval) {
-        irqGPIO.direction = .IN
-        irqGPIO.pull = .up
-        
         self.spi = spi
         self.irqGPIO = irqGPIO
         self.waitTime = waitTime

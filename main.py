@@ -1,7 +1,9 @@
 import RPi.GPIO as GPIO
+import time
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+#time.sleep(2)
 
 #from rfidlib import RFID
 #import time
