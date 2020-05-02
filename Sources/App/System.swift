@@ -48,20 +48,20 @@ public class System {
             throw SystemError.gpio(.P4)
         }
         
-        guard let power = gpios[.P13] else {
-            throw SystemError.gpio(.P13)
+        guard let power = gpios[.P24] else {
+            throw SystemError.gpio(.P24)
         }
         
-        guard let ready = gpios[.P19] else {
-            throw SystemError.gpio(.P19)
+        guard let ready = gpios[.P18] else {
+            throw SystemError.gpio(.P18)
         }
         
-        guard let success = gpios[.P26] else {
-            throw SystemError.gpio(.P26)
+        guard let success = gpios[.P23] else {
+            throw SystemError.gpio(.P23)
         }
 
-        guard let export = gpios[.P5] else {
-            throw SystemError.gpio(.P5)
+        guard let export = gpios[.P26] else {
+            throw SystemError.gpio(.P26)
         }
         
         self.rfid = RFID(spi: spis[0], irqGPIO: irq, waitTime: 3)
