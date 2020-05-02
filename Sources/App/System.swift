@@ -60,8 +60,8 @@ public class System {
             throw SystemError.gpio(.P23)
         }
 
-        guard let export = gpios[.P26] else {
-            throw SystemError.gpio(.P26)
+        guard let export = gpios[.P6] else {
+            throw SystemError.gpio(.P6)
         }
         
         self.rfid = RFID(spi: spis[0], irqGPIO: irq, waitTime: 3)
