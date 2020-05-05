@@ -109,7 +109,7 @@ extension System: RFIDDelegate {
                         
             do {
                 try file.writeTagOccurrence(tag: tag)
-                print("hello tag found")
+                print("tag found")
                 successLight.turnOn(for: rfid.waitTime)
                 readyLight.turnOff(for: rfid.waitTime)
             } catch {
@@ -125,14 +125,14 @@ extension System: RFIDDelegate {
 
 extension System: ButtonDelegate {
     public func buttonDidPush(_ button: Button) {
-        print("hello button pushed")
+        print("button pushed")
         do {
             try file.exportFile()
             successLight.turnOn(for: rfid.waitTime)
             readyLight.turnOff(for: rfid.waitTime)
         } catch {
             successLight.turnOff()
-            print("scan tag error", error.localizedDescription)
+            print("write file error", error.localizedDescription)
         }
     }
 }

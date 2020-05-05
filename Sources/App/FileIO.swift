@@ -24,7 +24,7 @@ class FileIO {
         
         self.fileURL = url
         self.writer = try CSVWriter(fileURL: url, append: true) { config in
-            config.headers = ["Date", "Time", "Tag"]
+//            config.headers = ["Date", "Time", "Tag"]
             config.encoding = .utf8
         }
     }
@@ -50,8 +50,21 @@ class FileIO {
     }
     
     func exportFile() throws {
-        // where usb drive will show up from `usbmount` program
-        let usbURL = URL(fileURLWithPath: "/media/usb0", isDirectory: true)
+        let mount = Process()
+        mount.executableURL = URL(fileURLWithPath: "/usr/bin/pmount")
+        mount.arguments = ["-s", "/dev/sda2", "pi"]
+        try mount.run()
+        mount.waitUntilExit()
+        
+        defer {
+            let umount = Process()
+            umount.executableURL = URL(fileURLWithPath: "/usr/bin/pumount")
+            umount.arguments = ["pi"]
+            try? umount.run()
+            umount.waitUntilExit()
+        }
+        
+        let usbURL = URL(fileURLWithPath: "/media/pi", isDirectory: true)
         let destination = usbURL.appendingPathComponent(fileURL.lastPathComponent)
         try fm.copyItem(at: fileURL, to: destination)
     }

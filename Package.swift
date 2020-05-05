@@ -5,6 +5,9 @@ import PackageDescription
 
 let package = Package(
     name: "Run",
+    platforms: [
+        .macOS(.v10_15)
+    ],
     products: [
         .executable(name: "Run", targets: ["Run"]),
         .library(name: "PiHardware", targets: ["PiHardware"])
